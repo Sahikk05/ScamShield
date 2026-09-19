@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ShieldCheck, Link, MessageSquare, AlertTriangle } from "lucide-react";
 import "./App.css";
 
@@ -6,6 +6,29 @@ function App() {
 const [message, setMessage] = useState("");
 const [mode, setMode] = useState("message");
 const [result, setResult] = useState(null);
+const [history, setHistory] = useState([]);
+
+useEffect(() => {
+  const savedHistory = JSON.parse(localStorage.getItem("scamShieldHistory")) || [];
+  setHistory(savedHistory);
+}, []);
+
+const saveToHistory = (data, input, scanMode) => {
+  const newScan = {
+    id: Date.now(),
+    input,
+    mode: scanMode,
+    score: data.score,
+    category: data.category,
+    scamType: data.scamType,
+    timestamp: new Date().toLocaleString(),
+  };
+
+  const updatedHistory = [newScan, ...history].slice(0, 10);
+
+  setHistory(updatedHistory);
+  localStorage.setItem("scamShieldHistory", JSON.stringify(updatedHistory));
+};
 
 const analyzeURL = async () => {
   try {
@@ -19,9 +42,10 @@ const analyzeURL = async () => {
       }),
     });
 
-    const data = await response.json();
+const data = await response.json();
 
-    setResult(data);
+setResult(data);
+saveToHistory(data, message, "url");
   } catch (error) {
     console.error("Backend URL analysis error:", error);
   }
@@ -38,9 +62,10 @@ const analyzeMessage = async () => {
       }),
     });
 
-    const data = await response.json();
+const data = await response.json();
 
-    setResult(data);
+setResult(data);
+saveToHistory(data, message, "message");
   } catch (error) {
     console.error("Backend connection error:", error);
   }
@@ -213,6 +238,49 @@ const analyzeMessage = async () => {
 </div>
           </div>
         )}
+              {history.length > 0 && (
+        <div className="history-section">
+          <div className="history-header">
+  <h2>🕘 Recent Scans</h2>
+
+  <button
+    className="clear-history-btn"
+    onClick={() => {
+      localStorage.removeItem("scamShieldHistory");
+      setHistory([]);
+    }}
+  >
+    Clear History
+  </button>
+</div>
+
+          <div className="history-list">
+            {history.map((scan) => (
+              <div className="history-item" key={scan.id}>
+                <div>
+                  <strong>
+                    {scan.category} — {scan.scamType}
+                  </strong>
+
+                  <p>
+                    {scan.mode === "url"
+                      ? scan.input
+                      : scan.input.length > 80
+                      ? scan.input.slice(0, 80) + "..."
+                      : scan.input}
+                  </p>
+
+                  <small>{scan.timestamp}</small>
+                </div>
+
+                <span className="history-score">
+                  {scan.score}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
