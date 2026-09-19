@@ -8,8 +8,17 @@ const [mode, setMode] = useState("message");
 const [result, setResult] = useState(null);
 
   const analyzeURL = () => {
-  const url = message.trim().toLowerCase();
-  const redFlags = [];
+const url = message.trim().toLowerCase();
+const redFlags = [];
+
+let domain = "";
+
+try {
+  const parsedURL = new URL(url);
+  domain = parsedURL.hostname;
+} catch {
+  domain = "Invalid URL";
+}
 
   if (url.startsWith("http://")) {
     redFlags.push("Uses an insecure HTTP connection");
@@ -41,12 +50,17 @@ const [result, setResult] = useState(null);
     category = "Potentially Suspicious";
   }
 
-  setResult({
-    score,
-    category,
-    scamType: "Suspicious URL",
-    redFlags,
-  });
+setResult({
+  score,
+  category,
+  scamType: "Suspicious URL",
+  domain,
+  redFlags,
+  explanation:
+    redFlags.length > 0
+      ? "This URL contains one or more patterns commonly associated with suspicious or phishing links."
+      : "No obvious suspicious patterns were detected in this URL.",
+});
 };
   const analyzeMessage = () => {
     const text = message.toLowerCase();
@@ -95,11 +109,23 @@ if (score >= 70) {
   category = "Potentially Suspicious";
 }
 
-    setResult({
+ setResult({
   score,
   category,
   scamType,
   redFlags,
+  explanation:
+    scamType === "Banking / KYC Scam"
+      ? "This message uses urgency and requests sensitive banking information, which are common warning signs of financial scams."
+      : scamType === "Prize / Lottery Scam"
+      ? "This message uses a reward or prize to encourage you to act quickly or provide personal information."
+      : scamType === "Job Scam"
+      ? "This message may be suspicious because it combines job-related claims with requests or instructions that could lead to financial loss."
+      : scamType === "Social Media / Account Scam"
+      ? "This message may be attempting to make you reveal account credentials by creating a verification or account-security concern."
+      : scamType === "Phishing"
+      ? "This message contains language commonly used to make users click a link or provide information without verifying the sender."
+      : "No strong scam pattern was identified in this message.",
 });
   };
   return (
@@ -210,12 +236,19 @@ if (score >= 70) {
                 <span className="result-label">ANALYSIS COMPLETE</span>
                 <h2>{result.category}</h2>
                 <p className="scam-type">{result.scamType}</p>
+
+                {mode === "url" && result.domain && (
+  <p className="scanned-domain">
+    🌐 {result.domain}
+  </p>
+)}
               </div>
 
               <div className="risk-score">
-                <strong>{result.score}%</strong>
-                <span>Risk</span>
-              </div>
+  <strong>{result.score}%</strong>
+  <span>Risk Score</span>
+  <small>{result.redFlags.length} indicators detected</small>
+</div>
             </div>
 
             <div className="result-section">
@@ -231,6 +264,11 @@ if (score >= 70) {
                 <p>No major warning signs detected.</p>
               )}
             </div>
+            
+            <div className="result-section">
+  <h3>💡 Why This Was Flagged</h3>
+  <p>{result.explanation}</p>
+</div>
 
             <div className="recommendation">
   <strong>🛡️ Recommended Action</strong>

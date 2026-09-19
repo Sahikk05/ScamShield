@@ -200,3 +200,19 @@
   background-color: #0f172a !important;
   color: #ffffff !important;
 }
+.risk-score strong {
+  display: block;
+  line-height: 1.1;
+}
+
+.risk-score span {
+  display: block;
+  margin-top: 4px;
+}
+
+.risk-score small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.7;
+}
