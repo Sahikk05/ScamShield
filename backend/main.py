@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from urllib.parse import urlparse
+import re
 
 load_dotenv()
 
@@ -101,7 +102,39 @@ Do not invent facts that are not present in the message."""
 
     return json.loads(response.choices[0].message.content)
 
-def ai_analyze_url(url: str):
+def check_url_structure(url: str):
+    flags = []
+
+    parsed = urlparse(url)
+    domain = parsed.hostname or ""
+
+    if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", domain):
+        flags.append("URL uses an IP address instead of a domain name")
+
+    if "@" in url:
+        flags.append("URL contains an @ symbol that can hide the actual destination")
+
+    if len(url) > 100:
+        flags.append("URL is unusually long")
+
+    shorteners = [
+        "bit.ly",
+        "tinyurl.com",
+        "t.co",
+        "is.gd",
+        "cutt.ly",
+        "shorturl.at"
+    ]
+
+    if domain.lower() in shorteners:
+        flags.append("URL uses a URL shortening service")
+
+    if domain.count(".") >= 3:
+        flags.append("URL contains multiple subdomains")
+
+    return flags
+
+def ai_analyze_url(url: str, structure_flags):
     response = client.chat.completions.create(
         model="openai/gpt-oss-20b",
         messages=[
@@ -117,22 +150,31 @@ Consider:
 - unusual subdomains
 - misleading paths
 - URL shorteners
-- suspicious TLDs
+- unusual or potentially suspicious TLDs (but do not treat a TLD alone as proof of a scam)
 - excessive URL length
 - use of IP addresses
 - deceptive URL patterns
 
 Only report warning signs that can actually be observed from the URL.
-Do not claim that a website is malicious unless the URL itself provides evidence.
+Do not claim that a website is malicious based on a single signal such as a TLD, URL length, or subdomain. Base the assessment on multiple observable indicators when possible.
 
 Return a structured security analysis.
 
 riskScore must be between 0 and 100.
-redFlags must contain specific warning signs actually found in the URL."""
+redFlags must contain specific warning signs actually found in the URL.
+scamTactics must identify the manipulation or deception tactics supported by the URL.
+Use only these categories when applicable:
+Impersonation, Suspicious Link, Credential Harvesting, Urgency, Financial Pressure.
+Do not include tactics that are not supported by the URL.
+Use cautious language. Describe a URL as suspicious or potentially phishing when the evidence is based only on URL characteristics. Do not state that it is confirmed malicious unless there is direct evidence in the URL itself."""
+
             },
             {
                 "role": "user",
-                "content": url
+                "content": f"""URL: {url}
+
+Automatically detected URL structure signals:
+{structure_flags}"""
             }
         ],
         response_format={
@@ -150,19 +192,20 @@ redFlags must contain specific warning signs actually found in the URL."""
                             "type": "number"
                         },
                         "redFlags": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "explanation": {
-                            "type": "string"
-                        }
+    "type": "array",
+    "items": {"type": "string"}
+},
+"scamTactics": {
+    "type": "array",
+    "items": {"type": "string"}
+},
+"explanation": {"type": "string"}
                     },
                     "required": [
                         "scamType",
                         "riskScore",
                         "redFlags",
+                        "scamTactics",
                         "explanation"
                     ],
                     "additionalProperties": False
@@ -211,7 +254,9 @@ def analyze_url(request: ScanRequest):
         parsed_url = urlparse(url)
         domain = parsed_url.hostname or "Invalid URL"
 
-        ai_result = ai_analyze_url(url)
+        structure_flags = check_url_structure(url)
+
+        ai_result = ai_analyze_url(url, structure_flags)
 
         score = max(0, min(100, int(ai_result["riskScore"])))
 
@@ -228,6 +273,7 @@ def analyze_url(request: ScanRequest):
             "scamType": ai_result["scamType"],
             "domain": domain,
             "redFlags": ai_result["redFlags"],
+            "scamTactics": ai_result["scamTactics"],
             "explanation": ai_result["explanation"]
         }
 

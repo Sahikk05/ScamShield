@@ -7,6 +7,8 @@ const [message, setMessage] = useState("");
 const [mode, setMode] = useState("message");
 const [result, setResult] = useState(null);
 const [history, setHistory] = useState([]);
+const [error, setError] = useState("");
+const [loading, setLoading] = useState(false);
 
 useEffect(() => {
   const savedHistory = JSON.parse(localStorage.getItem("scamShieldHistory")) || [];
@@ -32,6 +34,9 @@ const saveToHistory = (data, input, scanMode) => {
 
 const analyzeURL = async () => {
   try {
+    setError("");
+    setLoading(true);
+
     const response = await fetch("http://127.0.0.1:8000/analyze-url", {
       method: "POST",
       headers: {
@@ -44,14 +49,27 @@ const analyzeURL = async () => {
 
 const data = await response.json();
 
+if (!response.ok || data.error) {
+  console.error("AI URL analysis error:", data.error);
+  setError("Unable to analyze the URL. Please try again.");
+  setLoading(false);
+  return;
+}
+
 setResult(data);
 saveToHistory(data, message, "url");
+setLoading(false);
   } catch (error) {
     console.error("Backend URL analysis error:", error);
+    setError("Unable to connect to ScamShield AI. Please try again.");
+    setLoading(false);
   }
 };
 const analyzeMessage = async () => {
   try {
+    setError("");
+setLoading(true);
+
     const response = await fetch("http://127.0.0.1:8000/analyze", {
       method: "POST",
       headers: {
@@ -64,10 +82,20 @@ const analyzeMessage = async () => {
 
 const data = await response.json();
 
+if (!response.ok || data.error) {
+  console.error("AI analysis error:", data.error);
+  setError("Unable to analyze the message. Please try again.");
+  setLoading(false);
+  return;
+}
+
 setResult(data);
 saveToHistory(data, message, "message");
-  } catch (error) {
+setLoading(false);
+} catch (error) {
     console.error("Backend connection error:", error);
+    setError("Unable to connect to ScamShield AI. Please try again.");
+    setLoading(false);
   }
 };
   return (
@@ -140,10 +168,20 @@ saveToHistory(data, message, "message");
   disabled={!message.trim()}
 >
 <ShieldCheck size={18} />
-{mode === "message" ? "Analyze Message" : "Analyze URL"}
+{loading
+  ? "Analyzing..."
+  : mode === "message"
+  ? "Analyze Message"
+  : "Analyze URL"}
 </button>
           </div>
-        </div>
+                </div>
+
+        {error && (
+          <div className="error-message">
+            ⚠️ {error}
+          </div>
+        )}
 
         <div className="features">
           <div className="feature">
