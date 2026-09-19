@@ -45,6 +45,10 @@ Return a structured security analysis.
 
 riskScore must be between 0 and 100.
 redFlags must contain specific warning signs actually found in the message.
+scamTactics must identify the manipulation tactics actually used in the message.
+Use only these categories when applicable:
+Urgency, Threat, Impersonation, OTP Request, Credential Harvesting, Financial Pressure, Suspicious Link.
+Do not include tactics that are not supported by the message.
 Do not invent facts that are not present in the message."""
             },
             {
@@ -67,12 +71,18 @@ Do not invent facts that are not present in the message."""
                             "type": "number"
                         },
                         "redFlags": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "explanation": {
+    "type": "array",
+    "items": {
+        "type": "string"
+    }
+},
+"scamTactics": {
+    "type": "array",
+    "items": {
+        "type": "string"
+    }
+},
+"explanation": {
                             "type": "string"
                         }
                     },
@@ -80,7 +90,8 @@ Do not invent facts that are not present in the message."""
                         "scamType",
                         "riskScore",
                         "redFlags",
-                        "explanation"
+"scamTactics",
+"explanation"
                     ],
                     "additionalProperties": False
                 }
@@ -178,12 +189,13 @@ def analyze(request: ScanRequest):
             category = "Low Risk"
 
         return {
-            "score": score,
-            "category": category,
-            "scamType": ai_result["scamType"],
-            "redFlags": ai_result["redFlags"],
-            "explanation": ai_result["explanation"]
-        }
+    "score": score,
+    "category": category,
+    "scamType": ai_result["scamType"],
+    "redFlags": ai_result["redFlags"],
+    "scamTactics": ai_result["scamTactics"],
+    "explanation": ai_result["explanation"]
+}
 
     except Exception as e:
         return {

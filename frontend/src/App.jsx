@@ -183,6 +183,18 @@ const analyzeMessage = async () => {
                 <p>No major warning signs detected.</p>
               )}
             </div>
+
+            <div className="result-section">
+  <h3>🧠 Scam Tactics</h3>
+
+  <div className="tactics-list">
+    {result.scamTactics?.map((tactic, index) => (
+      <span className="tactic-tag" key={index}>
+        {tactic}
+      </span>
+    ))}
+  </div>
+</div>
             
             <div className="result-section">
   <h3>💡 Why This Was Flagged</h3>
