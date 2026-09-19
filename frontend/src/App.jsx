@@ -4,8 +4,50 @@ import "./App.css";
 
 function App() {
 const [message, setMessage] = useState("");
+const [mode, setMode] = useState("message");
 const [result, setResult] = useState(null);
 
+  const analyzeURL = () => {
+  const url = message.trim().toLowerCase();
+  const redFlags = [];
+
+  if (url.startsWith("http://")) {
+    redFlags.push("Uses an insecure HTTP connection");
+  }
+
+  if (url.match(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/)) {
+    redFlags.push("Uses an IP address instead of a domain name");
+  }
+
+  if (url.match(/verify|login|secure|account|update|confirm|bank/)) {
+    redFlags.push("Contains words commonly used in phishing links");
+  }
+
+  if (url.length > 80) {
+    redFlags.push("Unusually long URL");
+  }
+
+  if (url.match(/@|-{2,}|\.xyz|\.top|\.click/)) {
+    redFlags.push("Contains potentially suspicious domain patterns");
+  }
+
+  const score = Math.min(98, 10 + redFlags.length * 20);
+
+  let category = "Low Risk";
+
+  if (score >= 70) {
+    category = "High Risk";
+  } else if (score >= 40) {
+    category = "Potentially Suspicious";
+  }
+
+  setResult({
+    score,
+    category,
+    scamType: "Suspicious URL",
+    redFlags,
+  });
+};
   const analyzeMessage = () => {
     const text = message.toLowerCase();
 
@@ -94,19 +136,29 @@ if (score >= 70) {
 
         <div className="scanner">
           <div className="scanner-tabs">
-            <button className="tab active">
-              <MessageSquare size={18} />
-              Message
-            </button>
+            <button
+  className={`tab ${mode === "message" ? "active" : ""}`}
+  onClick={() => setMode("message")}
+>
+  <MessageSquare size={18} />
+  Message
+</button>
 
-            <button className="tab">
-              <Link size={18} />
-              URL
-            </button>
+<button
+  className={`tab ${mode === "url" ? "active" : ""}`}
+  onClick={() => setMode("url")}
+>
+  <Link size={18} />
+  URL
+</button>
           </div>
 
-          <textarea
-  placeholder="Paste a suspicious message here..."
+<textarea
+  placeholder={
+    mode === "message"
+      ? "Paste a suspicious message here..."
+      : "Paste a suspicious URL here..."
+  }
   rows="6"
   value={message}
   onChange={(e) => setMessage(e.target.value)}
@@ -116,11 +168,11 @@ if (score >= 70) {
             <span>🔒 Your message stays private</span>
             <button
   className="analyze-btn"
-  onClick={analyzeMessage}
+  onClick={mode === "message" ? analyzeMessage : analyzeURL}
   disabled={!message.trim()}
 >
-  <ShieldCheck size={18} />
-  Analyze Message
+<ShieldCheck size={18} />
+{mode === "message" ? "Analyze Message" : "Analyze URL"}
 </button>
           </div>
         </div>
@@ -181,12 +233,15 @@ if (score >= 70) {
             </div>
 
             <div className="recommendation">
-              <strong>🛡️ Recommended Action</strong>
-              <p>
-                Do not click suspicious links or share OTPs, passwords,
-                PINs, or banking information.
-              </p>
-            </div>
+  <strong>🛡️ Recommended Action</strong>
+
+  <p>
+    {mode === "message"
+      ? "Do not click suspicious links or share OTPs, passwords, PINs, or banking information."
+      : "Do not open this link. Verify the website domain independently before entering any personal or financial information."
+    }
+  </p>
+</div>
           </div>
         )}
     </div>

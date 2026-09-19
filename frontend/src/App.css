@@ -182,3 +182,21 @@
     border-right-color: var(--border);
   }
 }
+.tab {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 8px;
+  transition: 0.2s ease;
+}
+
+.tab:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.tab.active {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
