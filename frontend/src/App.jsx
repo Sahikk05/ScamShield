@@ -1,7 +1,65 @@
+import React, { useState } from "react";
 import { ShieldCheck, Link, MessageSquare, AlertTriangle } from "lucide-react";
 import "./App.css";
 
 function App() {
+const [message, setMessage] = useState("");
+const [result, setResult] = useState(null);
+
+  const analyzeMessage = () => {
+    const text = message.toLowerCase();
+
+    const redFlags = [];
+
+    if (text.match(/urgent|immediately|now|today|expires|blocked/)) {
+      redFlags.push("Creates urgency or pressure");
+    }
+
+    if (text.match(/otp|password|pin|cvv|bank|account|kyc/)) {
+      redFlags.push("Requests sensitive financial information");
+    }
+
+    if (text.match(/click|verify|confirm|login|link/)) {
+      redFlags.push("Contains a suspicious verification request");
+    }
+
+    if (text.match(/prize|winner|reward|lottery|cashback|free/)) {
+      redFlags.push("Uses a reward or prize lure");
+    }
+
+    const score = Math.min(
+      98,
+      15 + redFlags.length * 20
+    );
+
+    let category = "Low Risk";
+let scamType = "No clear scam pattern";
+
+if (text.match(/sbi|bank|kyc|account|otp|upi|cvv|pin|debit|credit|blocked/)) {
+  scamType = "Banking / KYC Scam";
+} else if (text.match(/prize|winner|lottery|reward|cashback|free gift|congratulations/)) {
+  scamType = "Prize / Lottery Scam";
+} else if (text.match(/job|hiring|work from home|salary|vacancy|registration fee|interview/)) {
+  scamType = "Job Scam";
+} else if (text.match(/instagram|facebook|whatsapp|telegram|account suspended|verify your account|login/)) {
+  scamType = "Social Media / Account Scam";
+} else if (text.match(/click|verify|confirm|login|http|www|link/)) {
+  scamType = "Phishing";
+}
+
+if (score >= 70) {
+  category = "High Risk";
+} else if (score >= 40) {
+  category = "Potentially Suspicious";
+}
+
+    setResult({
+  score,
+  category,
+  scamType,
+  redFlags,
+});
+  };
   return (
     <div className="app">
       <header className="navbar">
@@ -48,16 +106,22 @@ function App() {
           </div>
 
           <textarea
-            placeholder="Paste a suspicious message here..."
-            rows="6"
-          />
+  placeholder="Paste a suspicious message here..."
+  rows="6"
+  value={message}
+  onChange={(e) => setMessage(e.target.value)}
+/>
 
           <div className="scanner-footer">
             <span>🔒 Your message stays private</span>
-            <button className="analyze-btn">
-              <ShieldCheck size={18} />
-              Analyze Message
-            </button>
+            <button
+  className="analyze-btn"
+  onClick={analyzeMessage}
+  disabled={!message.trim()}
+>
+  <ShieldCheck size={18} />
+  Analyze Message
+</button>
           </div>
         </div>
 
@@ -87,6 +151,44 @@ function App() {
           </div>
         </div>
       </main>
+              {result && (
+          <div className="result-card">
+            <div className="result-header">
+              <div>
+                <span className="result-label">ANALYSIS COMPLETE</span>
+                <h2>{result.category}</h2>
+                <p className="scam-type">{result.scamType}</p>
+              </div>
+
+              <div className="risk-score">
+                <strong>{result.score}%</strong>
+                <span>Risk</span>
+              </div>
+            </div>
+
+            <div className="result-section">
+              <h3>🚩 Red Flags Detected</h3>
+
+              {result.redFlags.length > 0 ? (
+                <ul>
+                  {result.redFlags.map((flag, index) => (
+                    <li key={index}>{flag}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No major warning signs detected.</p>
+              )}
+            </div>
+
+            <div className="recommendation">
+              <strong>🛡️ Recommended Action</strong>
+              <p>
+                Do not click suspicious links or share OTPs, passwords,
+                PINs, or banking information.
+              </p>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
