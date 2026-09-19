@@ -152,7 +152,9 @@ const analyzeMessage = async () => {
               <div>
                 <span className="result-label">ANALYSIS COMPLETE</span>
                 <h2>{result.category}</h2>
-                <p className="scam-type">{result.scamType}</p>
+                <p className="scam-type">
+  {result.scamType.charAt(0).toUpperCase() + result.scamType.slice(1)}
+</p>
 
                 {mode === "url" && result.domain && (
   <p className="scanned-domain">
