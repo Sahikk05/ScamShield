@@ -90,6 +90,78 @@ Do not invent facts that are not present in the message."""
 
     return json.loads(response.choices[0].message.content)
 
+def ai_analyze_url(url: str):
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[
+            {
+                "role": "system",
+                "content": """You are ScamShield AI, a cybersecurity assistant.
+
+Analyze the provided URL for phishing, scam, malicious, or suspicious characteristics.
+
+Consider:
+- suspicious domain names
+- impersonation of trusted brands
+- unusual subdomains
+- misleading paths
+- URL shorteners
+- suspicious TLDs
+- excessive URL length
+- use of IP addresses
+- deceptive URL patterns
+
+Only report warning signs that can actually be observed from the URL.
+Do not claim that a website is malicious unless the URL itself provides evidence.
+
+Return a structured security analysis.
+
+riskScore must be between 0 and 100.
+redFlags must contain specific warning signs actually found in the URL."""
+            },
+            {
+                "role": "user",
+                "content": url
+            }
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "url_analysis",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "scamType": {
+                            "type": "string"
+                        },
+                        "riskScore": {
+                            "type": "number"
+                        },
+                        "redFlags": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "explanation": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "scamType",
+                        "riskScore",
+                        "redFlags",
+                        "explanation"
+                    ],
+                    "additionalProperties": False
+                }
+            }
+        }
+    )
+
+    return json.loads(response.choices[0].message.content)
+
 
 @app.post("/analyze")
 def analyze(request: ScanRequest):
@@ -121,63 +193,34 @@ def analyze(request: ScanRequest):
 
 @app.post("/analyze-url")
 def analyze_url(request: ScanRequest):
-    url = request.text.strip().lower()
-    red_flags = []
-
     try:
+        url = request.text.strip()
+
         parsed_url = urlparse(url)
         domain = parsed_url.hostname or "Invalid URL"
-    except Exception:
-        domain = "Invalid URL"
 
-    if url.startswith("http://"):
-        red_flags.append("Uses an insecure HTTP connection")
+        ai_result = ai_analyze_url(url)
 
-    if any(char.isdigit() for char in domain) and "." in domain:
-        parts = domain.split(".")
-        if all(part.isdigit() for part in parts):
-            red_flags.append("Uses an IP address instead of a domain name")
+        score = max(0, min(100, int(ai_result["riskScore"])))
 
-    if any(word in url for word in [
-        "verify", "login", "secure", "account", "update", "confirm", "bank"
-    ]):
-        red_flags.append("Contains words commonly used in phishing links")
+        if score >= 70:
+            category = "High Risk"
+        elif score >= 40:
+            category = "Potentially Suspicious"
+        else:
+            category = "Low Risk"
 
-    if len(url) > 80:
-        red_flags.append("Unusually long URL")
+        return {
+            "score": score,
+            "category": category,
+            "scamType": ai_result["scamType"],
+            "domain": domain,
+            "redFlags": ai_result["redFlags"],
+            "explanation": ai_result["explanation"]
+        }
 
-    if any(pattern in url for pattern in [
-        "@", "--", ".xyz", ".top", ".click"
-    ]):
-        red_flags.append("Contains potentially suspicious domain patterns")
-
-    if any(shortener in domain for shortener in [
-        "bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "shorturl.at"
-    ]):
-        red_flags.append("Uses a URL shortening service that hides the destination")
-
-    score = min(98, 10 + len(red_flags) * 20)
-
-    if score >= 70:
-        category = "High Risk"
-    elif score >= 40:
-        category = "Potentially Suspicious"
-    else:
-        category = "Low Risk"
-
-    explanation = (
-        "This URL contains one or more patterns commonly associated "
-        "with suspicious or phishing links."
-        if red_flags
-        else "No obvious suspicious patterns were detected in this URL."
-    )
-
-    return {
-        "score": score,
-        "category": category,
-        "scamType": "Suspicious URL",
-        "domain": domain,
-        "redFlags": red_flags,
-        "explanation": explanation,
-    }
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
 
