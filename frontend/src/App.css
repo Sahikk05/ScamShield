@@ -216,3 +216,28 @@
   font-size: 12px;
   opacity: 0.7;
 }
+
+.tactics-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tactic-tag {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.result-section ul {
+  padding-left: 20px;
+  margin: 10px auto 0;
+  width: fit-content;
+  text-align: left;
+}
