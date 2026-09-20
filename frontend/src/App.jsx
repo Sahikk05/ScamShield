@@ -92,12 +92,50 @@ if (!response.ok || data.error) {
 setResult(data);
 saveToHistory(data, message, "message");
 setLoading(false);
-} catch (error) {
+  } catch (error) {
     console.error("Backend connection error:", error);
     setError("Unable to connect to ScamShield AI. Please try again.");
     setLoading(false);
   }
 };
+
+const analyzeCombined = async () => {
+  try {
+    setError("");
+    setLoading(true);
+
+    const response = await fetch(
+      "https://scamshield-api-rc48.onrender.com/analyze-combined",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: message,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      console.error("AI combined analysis error:", data.error);
+      setError("Unable to analyze the message and URL. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    setResult(data);
+    saveToHistory(data, message, "combined");
+    setLoading(false);
+  } catch (error) {
+    console.error("Backend connection error:", error);
+    setError("Unable to connect to ScamShield AI. Please try again.");
+    setLoading(false);
+  }
+};
+
   return (
     <div className="app">
       <header className="navbar">
@@ -136,8 +174,8 @@ setLoading(false);
   className={`tab ${mode === "message" ? "active" : ""}`}
   onClick={() => setMode("message")}
 >
-  <MessageSquare size={18} />
-  Message
+<MessageSquare size={18} />
+Message
 </button>
 
 <button
@@ -147,13 +185,24 @@ setLoading(false);
   <Link size={18} />
   URL
 </button>
+
+<button
+  className={`tab ${mode === "combined" ? "active" : ""}`}
+  onClick={() => setMode("combined")}
+>
+  <ShieldCheck size={18} />
+  Message + URL
+</button>
           </div>
+        
 
 <textarea
   placeholder={
     mode === "message"
       ? "Paste a suspicious message here..."
-      : "Paste a suspicious URL here..."
+      : mode === "url"
+      ? "Paste a suspicious URL here..."
+      : "Paste the suspicious message and URL here..."
   }
   rows="6"
   value={message}
@@ -164,7 +213,13 @@ setLoading(false);
             <span>🔒 Your message stays private</span>
             <button
   className="analyze-btn"
-  onClick={mode === "message" ? analyzeMessage : analyzeURL}
+  onClick={
+  mode === "message"
+    ? analyzeMessage
+    : mode === "url"
+    ? analyzeURL
+    : analyzeCombined
+}
   disabled={!message.trim()}
 >
 <ShieldCheck size={18} />
@@ -172,7 +227,9 @@ setLoading(false);
   ? "Analyzing..."
   : mode === "message"
   ? "Analyze Message"
-  : "Analyze URL"}
+  : mode === "url"
+  ? "Analyze URL"
+  : "Analyze Message + URL"}
 </button>
           </div>
                 </div>

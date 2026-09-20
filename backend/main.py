@@ -285,4 +285,121 @@ def analyze_url(request: ScanRequest):
         return {
             "error": str(e)
         }
+@app.post("/analyze-combined")
+def analyze_combined(request: ScanRequest):
+    try:
+        text = request.text.strip()
 
+        # Find URLs inside the message
+        urls = re.findall(r"https?://[^\s]+", text)
+
+        url_context = urls[0] if urls else "No URL detected"
+
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are ScamShield AI, a cybersecurity assistant.
+
+Analyze the complete user input as a possible scam message containing a URL.
+
+Consider both:
+1. The wording and social-engineering tactics in the message.
+2. The URL and its observable characteristics.
+
+Look for:
+- urgency or threats
+- impersonation
+- OTP requests
+- credential harvesting
+- financial pressure
+- suspicious links
+- suspicious domains
+- deceptive URL paths
+- URL shorteners
+- unusual subdomains
+- IP addresses
+- misleading brand names
+
+Only report warning signs actually supported by the input.
+Do not invent facts.
+Do not claim a URL is confirmed malicious based only on its domain, TLD, or URL structure.
+
+Return a structured security analysis.
+
+riskScore must be between 0 and 100.
+redFlags must contain specific warning signs found in the message or URL.
+scamTactics must identify the manipulation or deception tactics actually supported by the input.
+
+Use only these tactic categories when applicable:
+Urgency, Threat, Impersonation, OTP Request, Credential Harvesting, Financial Pressure, Suspicious Link.
+
+The explanation should clearly explain how the message and URL work together, when applicable."""
+                },
+                {
+                    "role": "user",
+                    "content": f"""Complete input:
+{text}
+
+Detected URL:
+{url_context}"""
+                }
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "combined_scam_analysis",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "scamType": {"type": "string"},
+                            "riskScore": {"type": "number"},
+                            "redFlags": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            },
+                            "scamTactics": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            },
+                            "explanation": {"type": "string"}
+                        },
+                        "required": [
+                            "scamType",
+                            "riskScore",
+                            "redFlags",
+                            "scamTactics",
+                            "explanation"
+                        ],
+                        "additionalProperties": False
+                    }
+                }
+            }
+        )
+
+        ai_result = json.loads(response.choices[0].message.content)
+
+        score = max(0, min(100, int(ai_result["riskScore"])))
+
+        if score >= 70:
+            category = "High Risk"
+        elif score >= 40:
+            category = "Potentially Suspicious"
+        else:
+            category = "Low Risk"
+
+        return {
+            "score": score,
+            "category": category,
+            "scamType": ai_result["scamType"],
+            "redFlags": ai_result["redFlags"],
+            "scamTactics": ai_result["scamTactics"],
+            "explanation": ai_result["explanation"]
+        }
+
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
