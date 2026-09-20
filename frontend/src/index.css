@@ -52,6 +52,13 @@
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 #root {
