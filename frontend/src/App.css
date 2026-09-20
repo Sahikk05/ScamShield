@@ -328,3 +328,13 @@
   font-size: 13px;
   text-align: center;
 }
+
+.hero h1 {
+  line-height: 1.2;
+  margin: 0 0 18px;
+}
+
+.hero h1 span {
+  display: block;
+  margin-top: 6px;
+}
