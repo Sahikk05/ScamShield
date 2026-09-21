@@ -61,7 +61,7 @@ saveToHistory(data, message, "url");
 setLoading(false);
   } catch (error) {
     console.error("Backend URL analysis error:", error);
-    setError("Unable to connect to ScamShield AI. Please try again.");
+    setError("⏳ AI service is waking up. The first scan may take a few seconds. Please try again shortly.");
     setLoading(false);
   }
 };
@@ -70,7 +70,7 @@ const analyzeMessage = async () => {
     setError("");
 setLoading(true);
 
-    const response = await fetch("https://scamshield-api-rc48.onrender.com/analyze", {
+    const response = await fetch("https://scamshield-api-rc48.onrender.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
