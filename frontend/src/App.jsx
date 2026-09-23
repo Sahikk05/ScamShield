@@ -475,19 +475,22 @@ function App() {
         </div>
 
         <div className="recommendation">
-          <div className="recommendation-icon">
-            <ShieldCheck size={22} />
-          </div>
+  <strong>🛡️ Recommended Action</strong>
 
-          <div>
-            <strong>Recommended Action</strong>
-            <p>
-              {mode === "message"
-                ? "Do not click suspicious links or share OTPs, passwords, PINs, or banking information."
-                : "Do not open this link. Verify the website domain independently before entering any personal or financial information."}
-            </p>
-          </div>
-        </div>
+  <p>
+    {result.score < 30
+      ? "✅ No major risk detected. The content appears relatively safe based on the available indicators. You can proceed, but remain cautious with unexpected requests for sensitive information."
+
+      : result.score < 60
+      ? "⚠️ Some suspicious indicators were detected. Verify the sender, website, or request independently before taking any action or sharing personal information."
+
+      : result.score < 80
+      ? "🟠 High caution is advised. Avoid clicking suspicious links or sharing personal information until the source has been independently verified."
+
+      : "🔴 Do not interact with this content. Do not click suspicious links or share OTPs, passwords, PINs, banking information, or other sensitive information. Verify the source through an official channel."
+    }
+  </p>
+</div>
       </section>
     );
   };
